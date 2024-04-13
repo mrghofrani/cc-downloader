@@ -2,11 +2,12 @@ import os
 import re
 import gzip
 import json
-import shutil
 import logging
 import urllib3
 from tqdm import tqdm
 import concurrent.futures
+from pymongo import MongoClient
+
 
 from newspaper import Article
 from warcio.archiveiterator import ArchiveIterator
@@ -23,6 +24,8 @@ CC_INDEX_URL = f"{CC_BASE_URL}/crawl-data/CC-MAIN-{CC_VERSION}/cc-index.paths.gz
 OUTPUT_FOLDER = f"OUTPUT-CC-{CC_VERSION}"
 WARC_OUTPUT_FOLDER = f"WARC-CC-{CC_VERSION}"
 INDEX_FOLDER = f"INDEX-CC-{CC_VERSION}"
+DATABASE_NAME = CC_VERSION
+DATABASE_URI = "mongodb+srv://bot:<password>@cluster0.ewzdedv.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 BACKOFF_FACTOR = 0.1
 NUMBER_OF_REDIRECTS = 5
 NUMBER_OF_CONNECTION_RELATED_ERRORS = 5
@@ -37,6 +40,9 @@ logging.basicConfig(
     level=logging.DEBUG,
     handlers=[logging.FileHandler(LOG_FILENAME), logging.StreamHandler()],
 )
+
+client = MongoClient(DATABASE_URI)
+db = client[DATABASE_NAME]
 
 
 def download_url(url, path, headers=None):
@@ -127,6 +133,14 @@ def save_content(entry, content):
         f.write("\n")
 
 
+def entry_exists_in_db(entry):
+    return db.collection.count_documents({ 'digest': entry["digest"] }, limit = 1) != 0
+
+
+def add_entry_to_db(entry):
+    return db.insert_one({"digest": entry["digest"]}).inserted_id
+
+
 def worker(manager_id, worker_id, entry):
     try:
         logging.info(
@@ -143,8 +157,13 @@ def worker(manager_id, worker_id, entry):
         logging.debug(
             f"manager #{manager_id}, worker #{worker_id}: Saving content for {entry['digest']}"
         )
-        if len(re.sub(r"\n+", "\n", content)) > MIN_DOCUMENT_LENGTH:
+        if len(re.sub(r"\n+", "\n", content)) > MIN_DOCUMENT_LENGTH and \
+            not entry_exists_in_db(entry):
             save_content(entry, content)
+            inserted_id = add_entry_to_db(entry)
+            logging.info(f"manager #{manager_id}, worker #{worker_id}: Add entry with digest {entry['digest']} into database with id {inserted_id}.")
+        else:
+            logging.info(f"manager #{manager_id}, worker #{worker_id}: Entry with digest {entry['digest']} already exists.")
         logging.info(f"manager #{manager_id}, worker #{worker_id}: Done.")
     except Exception:
         logging.exception(
