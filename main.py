@@ -138,7 +138,7 @@ def entry_exists_in_db(entry):
 
 
 def add_entry_to_db(entry):
-    return db.insert_one({"digest": entry["digest"]}).inserted_id
+    return db.collection.insert_one({"digest": entry["digest"]}).inserted_id
 
 
 def worker(manager_id, worker_id, entry):
