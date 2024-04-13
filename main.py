@@ -2,6 +2,7 @@ import os
 import re
 import gzip
 import json
+import shutil
 import logging
 import urllib3
 from tqdm import tqdm
@@ -97,6 +98,7 @@ def cc_entry_downloader(entry):
         path=path,
         headers={"Range": f"bytes={offset}-{offset+length}"},
     )
+    content = ""
     with open(path, "rb") as f:
         i = 0
         for record in ArchiveIterator(f):
@@ -105,7 +107,9 @@ def cc_entry_downloader(entry):
                 logging.warning(f"{entry['digest']} has more than one entry!")
             if record.rec_headers["WARC-Type"] != "response":
                 logging.warning(f"{entry['digest']} is not of type response!")
-            return record.raw_stream.read().decode("utf-8", errors="ignore")
+            content = record.raw_stream.read().decode("utf-8", errors="ignore")
+    os.remove(path)
+    return content
 
 
 def content_extractor(entry, html):
