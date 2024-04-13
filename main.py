@@ -167,6 +167,7 @@ def manager(manager_id, index_path):
         for future in concurrent.futures.as_completed(future2path):
             entry = future2path[future]
             logging.info(f"The entry {entry['digest']} is processed.")
+    os.remove(index_path)
 
 
 def main():
