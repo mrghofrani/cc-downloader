@@ -7,13 +7,19 @@ import urllib3
 from tqdm import tqdm
 import concurrent.futures
 from pymongo import MongoClient
+from configparser import ConfigParser
 
 
 from newspaper import Article
 from warcio.archiveiterator import ArchiveIterator
 
 
-MAX_MANAGER_NUMS = 4
+secrets = ConfigParser()
+with open("secrets.ini") as f:
+    secrets.read_file(f)
+
+
+MAX_MANAGER_NUMS = 1
 EACH_MANAGER_WORKERS = 3
 MIN_DOCUMENT_LENGTH = 500
 LOG_FILENAME = "file.log"
@@ -25,7 +31,10 @@ OUTPUT_FOLDER = f"OUTPUT-CC-{CC_VERSION}"
 WARC_OUTPUT_FOLDER = f"WARC-CC-{CC_VERSION}"
 INDEX_FOLDER = f"INDEX-CC-{CC_VERSION}"
 DATABASE_NAME = CC_VERSION
-DATABASE_URI = "mongodb+srv://bot:<password>@cluster0.ewzdedv.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+DATABASE_USERNAME = secrets["database"]["username"]
+DATABASE_PASSWORD = secrets["database"]["password"]
+DATABASE_URL = "cluster0.ewzdedv.mongodb.net"
+DATABASE_URI = f"mongodb+srv://{DATABASE_USERNAME}:{DATABASE_PASSWORD}@{DATABASE_URL}/"
 BACKOFF_FACTOR = 0.1
 NUMBER_OF_REDIRECTS = 5
 NUMBER_OF_CONNECTION_RELATED_ERRORS = 5
