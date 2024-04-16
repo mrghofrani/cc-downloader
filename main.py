@@ -181,9 +181,10 @@ def worker(manager_id, worker_id, entry):
 
 
 def manager(manager_id, index_path):
-    logging.info(f"worker #{manager_id}: Getting Started.")
+    logging.info(f"manager #{manager_id}: Getting Started to work on {index_path}")
     index_filename = index_path.split("/")[-1]
     download_url(f"{CC_BASE_URL}/{index_path}", f"{INDEX_FOLDER}/{index_filename}")
+    logging.info(f"manager #{manager_id}: Downloaded index file, extracting the entries.")
     entries = extract_entries(f"{INDEX_FOLDER}/{index_filename}")
     with concurrent.futures.ThreadPoolExecutor(
         max_workers=EACH_MANAGER_WORKERS
@@ -195,7 +196,9 @@ def manager(manager_id, index_path):
         for future in concurrent.futures.as_completed(future2path):
             entry = future2path[future]
             logging.info(f"The entry {entry['digest']} is processed.")
+    logging.info(f"manager #{manager_id}: Done extracting entries removing index_path")
     os.remove(index_path)
+    logging.info(f"manager #{manager_id}: Done.")
 
 
 def main():
