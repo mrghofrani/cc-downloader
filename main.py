@@ -179,30 +179,35 @@ def worker(manager_id, worker_id, entry):
         logging.info(f"manager #{manager_id}, worker #{worker_id}: Done.")
     except Exception:
         logging.exception(
-            f"manager #{manager_id}, worker #{worker_id}: Terminated with exception"
+            f"manager #{manager_id}, worker #{worker_id}: Worker terminated with exception"
         )
 
 
 def manager(manager_id, index_path):
-    logging.info(f"manager #{manager_id}: Getting Started to work on {index_path}")
-    index_filename = index_path.split("/")[-1]
-    download_url(f"{CC_BASE_URL}/{index_path}", f"{INDEX_FOLDER}/{index_filename}")
-    logging.info(f"manager #{manager_id}: Downloaded index file, extracting the entries.")
-    entries = extract_entries(f"{INDEX_FOLDER}/{index_filename}")
-    logging.info(f"manager #{manager_id}: Extracted entries, running workers.")
-    with concurrent.futures.ThreadPoolExecutor(
-        max_workers=EACH_MANAGER_WORKERS
-    ) as executor:
-        future2path = {
-            executor.submit(worker, manager_id, _id, entry): entry
-            for _id, entry in enumerate(entries)
-        }
-        for future in concurrent.futures.as_completed(future2path):
-            entry = future2path[future]
-            logging.info(f"The entry {entry['digest']} is processed.")
-    logging.info(f"manager #{manager_id}: Done extracting entries removing index_path")
-    os.remove(index_path)
-    logging.info(f"manager #{manager_id}: Done.")
+    try:
+        logging.info(f"manager #{manager_id}: Getting Started to work on {index_path}")
+        index_filename = index_path.split("/")[-1]
+        download_url(f"{CC_BASE_URL}/{index_path}", f"{INDEX_FOLDER}/{index_filename}")
+        logging.info(f"manager #{manager_id}: Downloaded index file, extracting the entries.")
+        entries = extract_entries(f"{INDEX_FOLDER}/{index_filename}")
+        logging.info(f"manager #{manager_id}: Extracted entries, running workers.")
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=EACH_MANAGER_WORKERS
+        ) as executor:
+            future2path = {
+                executor.submit(worker, manager_id, _id, entry): entry
+                for _id, entry in enumerate(entries)
+            }
+            for future in concurrent.futures.as_completed(future2path):
+                entry = future2path[future]
+                logging.info(f"The entry {entry['digest']} is processed.")
+        logging.info(f"manager #{manager_id}: Done extracting entries removing index_path")
+        os.remove(index_path)
+        logging.info(f"manager #{manager_id}: Done.")
+    except Exception:
+        logging.exception(
+            f"manager #{manager_id}: Manager terminated with exception"
+        )
 
 
 def main():
