@@ -166,13 +166,16 @@ def worker(manager_id, worker_id, entry):
         logging.debug(
             f"manager #{manager_id}, worker #{worker_id}: Saving content for {entry['digest']}"
         )
-        if len(re.sub(r"\n+", "\n", content)) > MIN_DOCUMENT_LENGTH and \
-            not entry_exists_in_db(entry):
-            save_content(entry, content)
-            inserted_id = add_entry_to_db(entry)
-            logging.info(f"manager #{manager_id}, worker #{worker_id}: Add entry with digest {entry['digest']} into database with id {inserted_id}.")
+        content_length = len(re.sub(r"\n+", "\n", content))
+        if content_length > MIN_DOCUMENT_LENGTH:
+            if not entry_exists_in_db(entry):
+                save_content(entry, content)
+                inserted_id = add_entry_to_db(entry)
+                logging.info(f"manager #{manager_id}, worker #{worker_id}: Add entry with digest {entry['digest']} into database with id {inserted_id}.")
+            else:
+                logging.info(f"manager #{manager_id}, worker #{worker_id}: Entry with digest {entry['digest']} already exists.")
         else:
-            logging.info(f"manager #{manager_id}, worker #{worker_id}: Entry with digest {entry['digest']} already exists.")
+            logging.info(f"manager #{manager_id}, worker #{worker_id}: Content length is {content_length} which is less than {MIN_DOCUMENT_LENGTH}")
         logging.info(f"manager #{manager_id}, worker #{worker_id}: Done.")
     except Exception:
         logging.exception(
@@ -186,6 +189,7 @@ def manager(manager_id, index_path):
     download_url(f"{CC_BASE_URL}/{index_path}", f"{INDEX_FOLDER}/{index_filename}")
     logging.info(f"manager #{manager_id}: Downloaded index file, extracting the entries.")
     entries = extract_entries(f"{INDEX_FOLDER}/{index_filename}")
+    logging.info(f"manager #{manager_id}: Extracted entries, running workers.")
     with concurrent.futures.ThreadPoolExecutor(
         max_workers=EACH_MANAGER_WORKERS
     ) as executor:
