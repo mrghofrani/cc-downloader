@@ -3,7 +3,8 @@ import re
 import gzip
 import json
 import logging
-import urllib3
+import requests
+from requests.adapters import HTTPAdapter, Retry
 from tqdm import tqdm
 import concurrent.futures
 from pymongo import MongoClient
@@ -39,7 +40,7 @@ BACKOFF_FACTOR = 0.1
 NUMBER_OF_REDIRECTS = 5
 NUMBER_OF_CONNECTION_RELATED_ERRORS = 5
 NUMBER_OF_READ_RELATED_ERRORS = 2
-CHUNK_SIZE = 10_000
+CHUNK_SIZE = 8192
 os.mkdir(INDEX_FOLDER)
 os.mkdir(OUTPUT_FOLDER)
 os.mkdir(WARC_OUTPUT_FOLDER)
@@ -55,22 +56,21 @@ db = client[DATABASE_NAME]
 
 
 def download_url(url, path, headers=None):
-    retries = urllib3.Retry(
-        connect=NUMBER_OF_CONNECTION_RELATED_ERRORS,
-        read=NUMBER_OF_READ_RELATED_ERRORS,
-        redirect=NUMBER_OF_REDIRECTS,
-        backoff_factor=BACKOFF_FACTOR,
-    )
-    http = urllib3.PoolManager(retries=retries)
-    request = http.request("GET", url, headers=headers, preload_content=False)
+    session = requests.Session()
+    retries = Retry(connect=NUMBER_OF_CONNECTION_RELATED_ERRORS,
+                    read=NUMBER_OF_READ_RELATED_ERRORS,
+                    redirect=NUMBER_OF_REDIRECTS,
+                    backoff_factor=BACKOFF_FACTOR,
+                    status_forcelist=[ 500, 502, 503, 504 ])
 
-    with open(path, "wb") as out:
-        while True:
-            data = request.read(CHUNK_SIZE)
-            if not data:
-                break
-            out.write(data)
-    request.release_conn()
+    session.mount('http://', HTTPAdapter(max_retries=retries))
+    session.mount('https://', HTTPAdapter(max_retries=retries))
+
+    with session.get(url, headers=headers, stream=True) as req:
+        req.raise_for_status()
+        with open(path, 'wb') as f:
+            for chunk in req.iter_content(chunk_size=CHUNK_SIZE):
+                f.write(chunk)
 
 
 def get_cc_indices():
