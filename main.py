@@ -202,7 +202,7 @@ def manager(manager_id, index_path):
                 entry = future2path[future]
                 logging.info(f"The entry {entry['digest']} is processed.")
         logging.info(f"manager #{manager_id}: Done extracting entries removing index_path")
-        os.remove(index_path)
+        os.remove(f"{INDEX_FOLDER}/{index_filename}")
         logging.info(f"manager #{manager_id}: Done.")
     except Exception:
         logging.exception(
