@@ -20,8 +20,8 @@ with open("secrets.ini") as f:
     secrets.read_file(f)
 
 
-MAX_MANAGER_NUMS = 1
-EACH_MANAGER_WORKERS = 3
+MAX_MANAGER_NUMS = 2
+EACH_MANAGER_WORKERS = 2
 MIN_DOCUMENT_LENGTH = 500
 LOG_FILENAME = "file.log"
 CC_VERSION = "2023-23"
