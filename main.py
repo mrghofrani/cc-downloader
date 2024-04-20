@@ -19,7 +19,7 @@ secrets = ConfigParser()
 with open("secrets.ini") as f:
     secrets.read_file(f)
 
-
+START_PROCESSING_FROM_INDEX = 0
 MAX_MANAGER_NUMS = 2
 EACH_MANAGER_WORKERS = 2
 MIN_DOCUMENT_LENGTH = 500
@@ -218,7 +218,7 @@ def main():
     with concurrent.futures.ProcessPoolExecutor(max_workers=MAX_MANAGER_NUMS) as executor:
         future2path = {
             executor.submit(manager, _id, file): file
-            for _id, file in enumerate(cc_index_paths)
+            for _id, file in enumerate(cc_index_paths[START_PROCESSING_FROM_INDEX:])
         }
         for future in tqdm(
             concurrent.futures.as_completed(future2path), total=len(future2path)
