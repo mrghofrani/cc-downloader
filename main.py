@@ -24,6 +24,7 @@ MAX_MANAGER_NUMS = 2
 EACH_MANAGER_WORKERS = 2
 MIN_DOCUMENT_LENGTH = 500
 LOG_FILENAME = "file.log"
+LOG_MAX_BYTES_TO_ROTATE = 30_000_000
 CC_VERSION = "2023-23"
 TARGET_LANGUAGE = "fas"
 CC_BASE_URL = "https://data.commoncrawl.org"
@@ -48,7 +49,8 @@ logging.basicConfig(
     format="%(asctime)s,%(msecs)d %(levelname)s %(message)s",
     datefmt="%H:%M:%S",
     level=logging.DEBUG,
-    handlers=[logging.FileHandler(LOG_FILENAME), logging.StreamHandler()],
+    handlers=[logging.RotatingFileHandler(LOG_FILENAME, maxBytes=LOG_MAX_BYTES_TO_ROTATE, encoding='utf-8'),
+              logging.StreamHandler()],
 )
 
 client = MongoClient(DATABASE_URI)
