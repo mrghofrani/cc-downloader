@@ -43,9 +43,30 @@ NUMBER_OF_REDIRECTS = 5
 NUMBER_OF_CONNECTION_RELATED_ERRORS = 5
 NUMBER_OF_READ_RELATED_ERRORS = 2
 CHUNK_SIZE = 8192
-os.mkdir(INDEX_FOLDER)
-os.mkdir(OUTPUT_FOLDER)
-os.mkdir(WARC_OUTPUT_FOLDER)
+try:
+    os.mkdir(INDEX_FOLDER)
+except FileExistsError:
+    logging.warning(f"INDEX_FOLDER={INDEX_FOLDER} already exists, continue?(y/n)")
+    _input = input()
+    if _input != "y":
+        exit(1)
+
+try:
+    os.mkdir(OUTPUT_FOLDER)
+except FileExistsError:
+    logging.warning(f"OUTPUT_FOLDER={OUTPUT_FOLDER} already exists, continue?(y/n)")
+    _input = input()
+    if _input != "y":
+        exit(1)
+
+try:
+    os.mkdir(WARC_OUTPUT_FOLDER)
+except FileExistsError:
+    logging.warning(f"WARC_OUTPUT_FOLDER={WARC_OUTPUT_FOLDER} already exists, continue?(y/n)")
+    _input = input()
+    if _input != "y":
+        exit(1)
+
 logging.basicConfig(
     format="%(asctime)s,%(msecs)d %(levelname)s %(message)s",
     datefmt="%H:%M:%S",
