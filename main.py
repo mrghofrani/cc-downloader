@@ -3,6 +3,7 @@ import re
 import gzip
 import json
 import logging
+from logging.handlers import RotatingFileHandler
 import requests
 from requests.adapters import HTTPAdapter, Retry
 from tqdm import tqdm
@@ -49,7 +50,7 @@ logging.basicConfig(
     format="%(asctime)s,%(msecs)d %(levelname)s %(message)s",
     datefmt="%H:%M:%S",
     level=logging.DEBUG,
-    handlers=[logging.RotatingFileHandler(LOG_FILENAME, maxBytes=LOG_MAX_BYTES_TO_ROTATE, encoding='utf-8'),
+    handlers=[RotatingFileHandler(LOG_FILENAME, maxBytes=LOG_MAX_BYTES_TO_ROTATE, encoding='utf-8'),
               logging.StreamHandler()],
 )
 
