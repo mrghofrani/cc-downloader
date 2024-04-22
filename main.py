@@ -43,6 +43,14 @@ NUMBER_OF_REDIRECTS = 5
 NUMBER_OF_CONNECTION_RELATED_ERRORS = 5
 NUMBER_OF_READ_RELATED_ERRORS = 2
 CHUNK_SIZE = 8192
+logging.basicConfig(
+    format="%(asctime)s,%(msecs)d %(levelname)s %(message)s",
+    datefmt="%H:%M:%S",
+    level=logging.DEBUG,
+    handlers=[RotatingFileHandler(LOG_FILENAME, maxBytes=LOG_MAX_BYTES_TO_ROTATE, encoding='utf-8'),
+              logging.StreamHandler()],
+)
+
 try:
     os.mkdir(INDEX_FOLDER)
 except FileExistsError:
@@ -66,14 +74,6 @@ except FileExistsError:
     _input = input()
     if _input != "y":
         exit(1)
-
-logging.basicConfig(
-    format="%(asctime)s,%(msecs)d %(levelname)s %(message)s",
-    datefmt="%H:%M:%S",
-    level=logging.DEBUG,
-    handlers=[RotatingFileHandler(LOG_FILENAME, maxBytes=LOG_MAX_BYTES_TO_ROTATE, encoding='utf-8'),
-              logging.StreamHandler()],
-)
 
 client = MongoClient(DATABASE_URI)
 db = client[DATABASE_NAME]
