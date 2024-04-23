@@ -16,6 +16,9 @@ from newspaper import Article
 from warcio.archiveiterator import ArchiveIterator
 
 
+from log import RollingFileHandler
+
+
 secrets = ConfigParser()
 with open("secrets.ini") as f:
     secrets.read_file(f)
@@ -47,7 +50,7 @@ logging.basicConfig(
     format="%(asctime)s,%(msecs)d %(levelname)s %(message)s",
     datefmt="%H:%M:%S",
     level=logging.DEBUG,
-    handlers=[RotatingFileHandler(LOG_FILENAME, maxBytes=LOG_MAX_BYTES_TO_ROTATE, encoding='utf-8'),
+    handlers=[RollingFileHandler(LOG_FILENAME, maxBytes=LOG_MAX_BYTES_TO_ROTATE, encoding='utf-8'),
               logging.StreamHandler()],
 )
 
