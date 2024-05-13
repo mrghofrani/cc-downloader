@@ -164,6 +164,8 @@ def content_extractor(entry, html):
 def save_content(entry, content):
     entry["content"] = content
     filename = entry["filename"].split("/")[-1].split(".")[0] + ".jsonl"
+    entry = {key: entry[key] for key in
+             ['url', 'status', 'digest', 'length', 'offset', 'filename', 'languages', 'content']}
     with open(f"{OUTPUT_FOLDER}/{filename}", "a") as f:
         f.write(json.dumps(entry, ensure_ascii=False))
         f.write("\n")
