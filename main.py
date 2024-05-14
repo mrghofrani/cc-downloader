@@ -1,9 +1,9 @@
 import os
+import gc
 import re
 import gzip
 import json
 import logging
-from logging.handlers import RotatingFileHandler
 import requests
 from requests.adapters import HTTPAdapter, Retry
 from tqdm import tqdm
@@ -229,6 +229,8 @@ def manager(manager_id, index_path):
             }
             for future in concurrent.futures.as_completed(future2path):
                 entry = future2path[future]
+                future2path.pop(future)
+                gc.collect()
                 logging.info(f"The entry {entry['digest']} is processed.")
         logging.info(f"manager #{manager_id}: Done extracting entries removing index_path")
         os.remove(f"{INDEX_FOLDER}/{index_filename}")
@@ -251,6 +253,8 @@ def main():
             concurrent.futures.as_completed(future2path), total=len(future2path)
         ):
             index = future2path[future]
+            future2path.pop(future)
+            gc.collect()
             logging.info(f"The index file {index} is processed.")
 
 
