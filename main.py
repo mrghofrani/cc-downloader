@@ -3,8 +3,8 @@ import re
 import gzip
 import json
 import logging
-from logging.handlers import RotatingFileHandler
 import requests
+import threading
 from requests.adapters import HTTPAdapter, Retry
 from tqdm import tqdm
 import concurrent.futures
@@ -129,12 +129,11 @@ def extract_entries(index_segment):
     return entries
 
 
-def cc_entry_downloader(entry):
+def cc_entry_downloader(entry, output_directory):
     offset, length = int(entry["offset"]), int(entry["length"])
-    dirname = entry["filename"].split("/")[-1].split(".")[0]
     filename = entry["digest"] + ".warc.gz"
-    os.makedirs(f"{WARC_OUTPUT_FOLDER}/{dirname}", exist_ok=True)
-    path = f"{WARC_OUTPUT_FOLDER}/{dirname}/{filename}"
+    os.makedirs(f"{WARC_OUTPUT_FOLDER}/{output_directory}", exist_ok=True)
+    path = f"{WARC_OUTPUT_FOLDER}/{output_directory}/{filename}"
     download_url(
         f"{CC_BASE_URL}/{entry['filename']}",
         path=path,
@@ -161,14 +160,13 @@ def content_extractor(entry, html):
     return article.text
 
 
-def save_content(entry, content):
-    entry["content"] = content
-    filename = entry["filename"].split("/")[-1].split(".")[0] + ".jsonl"
-    entry = {key: entry[key] for key in
+def save_content(entry, output_filename, file_lock):
+    entry = {key: entry.get(key, "") for key in
              ['url', 'status', 'digest', 'length', 'offset', 'filename', 'languages', 'content']}
-    with open(f"{OUTPUT_FOLDER}/{filename}", "a") as f:
-        f.write(json.dumps(entry, ensure_ascii=False))
-        f.write("\n")
+    with file_lock:
+        with open(f"{OUTPUT_FOLDER}/{output_filename}.jsonl", "a") as f:
+            f.write(json.dumps(entry, ensure_ascii=False))
+            f.write("\n")
 
 
 def entry_exists_in_db(entry):
@@ -179,7 +177,7 @@ def add_entry_to_db(entry):
     return db.collection.insert_one({"digest": entry["digest"]}).inserted_id
 
 
-def worker(manager_id, worker_id, entry):
+def worker(manager_id, worker_id, output_filename, file_lock, entry):
     try:
         logging.info(
             f"manager #{manager_id}, worker #{worker_id}: Processing {entry['digest']}"
@@ -187,7 +185,7 @@ def worker(manager_id, worker_id, entry):
         logging.debug(
             f"manager #{manager_id}, worker #{worker_id}: Downloading {entry['digest']}"
         )
-        html = cc_entry_downloader(entry)
+        html = cc_entry_downloader(entry, output_filename)
         logging.debug(
             f"manager #{manager_id}, worker #{worker_id}: Extracting content for {entry['digest']}"
         )
@@ -198,7 +196,8 @@ def worker(manager_id, worker_id, entry):
         content_length = len(re.sub(r"\n+", "\n", content))
         if content_length > MIN_DOCUMENT_LENGTH:
             if not entry_exists_in_db(entry):
-                save_content(entry, content)
+                entry["content"] = content
+                save_content(entry, output_filename, file_lock)
                 inserted_id = add_entry_to_db(entry)
                 logging.info(f"manager #{manager_id}, worker #{worker_id}: Add entry with digest {entry['digest']} into database with id {inserted_id}.")
             else:
@@ -220,11 +219,13 @@ def manager(manager_id, index_path):
         logging.info(f"manager #{manager_id}: Downloaded index file, extracting the entries.")
         entries = extract_entries(f"{INDEX_FOLDER}/{index_filename}")
         logging.info(f"manager #{manager_id}: Extracted entries, running workers.")
+        lock = threading.Lock()
         with concurrent.futures.ThreadPoolExecutor(
             max_workers=EACH_MANAGER_WORKERS
         ) as executor:
+            index_filename_without_extension = index_filename.split(".")[0]
             future2path = {
-                executor.submit(worker, manager_id, _id, entry): entry
+                executor.submit(worker, manager_id, _id, index_filename_without_extension, lock, entry): entry
                 for _id, entry in enumerate(entries)
             }
             for future in concurrent.futures.as_completed(future2path):
