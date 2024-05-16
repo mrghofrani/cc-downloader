@@ -48,7 +48,7 @@ NUMBER_OF_READ_RELATED_ERRORS = 2
 CHUNK_SIZE = 8192
 logging.basicConfig(
     format="%(asctime)s,%(msecs)d %(levelname)s %(message)s",
-    datefmt="%H:%M:%S",
+    datefmt="%Y-%m-%d %H:%M:%S",
     level=logging.DEBUG,
     handlers=[RollingFileHandler(LOG_FILENAME, maxBytes=LOG_MAX_BYTES_TO_ROTATE, encoding='utf-8'),
               logging.StreamHandler()],
